@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services
+           https://symfony.com/schema/dic/services/services-1.0.xsd">
+
+    <services>
+        <service id="dktaylor.bundle_generator.kernel_utility" class="Dktaylor\BundleGeneratorBundle\KernelUtility">
+            <argument type="service" id="kernel" />
+        </service>
+        <service id="dktaylor.bundle_generator.string_utility" class="Dktaylor\BundleGeneratorBundle\StringUtility" />
+        <service id="dktaylor.bundle_generator.answer_collection" class="Dktaylor\BundleGeneratorBundle\AnswerCollection" />
+        <service id="dktaylor.bundle_generator.bundle_manager" class="Dktaylor\BundleGeneratorBundle\BundleManager" autowire="true">
+            <argument type="tagged_iterator" tag="dktaylor_bundle_generator.directory_generator_handler" />
+            <argument type="tagged_iterator" tag="dktaylor_bundle_generator.file_generator_handler" />
+            <argument type="service" id="filesystem" />
+            <argument type="service" id="dktaylor.bundle_generator.kernel_utility" />
+            <argument type="string">/lib</argument><!-- TODO: add this to configuration -->
+        </service>
+        <service id="dktaylor.bundle_generator.bundle_question_manager" class="Dktaylor\BundleGeneratorBundle\BundleQuestionManager" autowire="true">
+            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
+        </service>
+        <service id="dktaylor.bundle_generator.composer_manager" class="Dktaylor\BundleGeneratorBundle\ComposerManager" autowire="true">
+            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
+        </service>
+        <service id="dktaylor.bundle_generator.composer_question_manager" class="Dktaylor\BundleGeneratorBundle\ComposerQuestionManager" autowire="true">
+            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
+        </service>
+        <service id="dktaylor.bundle_generator.generate_bundle_command" class="Dktaylor\BundleGeneratorBundle\Command\GenerateBundleSkeletonCommand" autowire="true">
+            <argument type="service" id="dktaylor.bundle_generator.bundle_question_manager" />
+            <argument type="service" id="dktaylor.bundle_generator.composer_question_manager" />
+            <argument type="service" id="dktaylor.bundle_generator.bundle_manager" />
+            <argument type="service" id="dktaylor.bundle_generator.composer_manager" />
+            <tag name="console.command" command="dktaylor:generate-bundle-skeleton" />
+        </service>
+    </services>
+</container>

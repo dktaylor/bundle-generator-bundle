@@ -1,0 +1,20 @@
+{
+    "name": "dktaylor/bundle-generator-bundle",
+    "description": "A Symfony bundle to help generate Symfony bundles",
+    "type": "symfony-bundle",
+    "autoload": {
+        "psr-4": {
+            "Dktaylor\\BundleGeneratorBundle\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Daniel Taylor",
+            "email": "dktaylor3@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^8.3"
+    }
+}
