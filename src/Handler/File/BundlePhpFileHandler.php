@@ -2,7 +2,6 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Handler\File;
 
-
 use Dktaylor\BundleGeneratorBundle\AnswerCollection;
 use Dktaylor\BundleGeneratorBundle\Handler\FileGeneratorHandlerInterface;
 use Symfony\Component\Filesystem\Filesystem;

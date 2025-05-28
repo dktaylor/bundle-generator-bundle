@@ -2,7 +2,6 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Command;
 
-
 use Dktaylor\BundleGeneratorBundle\AnswerCollection;
 use Dktaylor\BundleGeneratorBundle\BundleManager;
 use Dktaylor\BundleGeneratorBundle\BundleQuestionManager;
