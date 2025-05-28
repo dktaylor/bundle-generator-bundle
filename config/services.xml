@@ -33,5 +33,27 @@
             <argument type="service" id="dktaylor.bundle_generator.composer_manager" />
             <tag name="console.command" command="dktaylor:generate-bundle-skeleton" />
         </service>
+
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\AssetsDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\ConfigDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\DocsDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\PublicDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\SrcDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TemplatesDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TestsDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TranslationsDirectoryHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\BundlePhpFileHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\DocsIndexFileHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\LicenseFileHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\ReadmeMdFileHandler" />
+        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\ServicesXmlFileHandler" />
+
+        <instanceof id="Dktaylor\BundleGeneratorBundle\Handler\DirectoryGeneratorHandlerInterface" autowire="true">
+            <tag name="dktaylor_bundle_generator.directory_generator_handler" />
+        </instanceof>
+
+        <instanceof id="Dktaylor\BundleGeneratorBundle\Handler\FileGeneratorHandlerInterface" autowire="true">
+            <tag name="dktaylor_bundle_generator.file_generator_handler" />
+        </instanceof>
     </services>
 </container>

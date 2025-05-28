@@ -10,15 +10,14 @@ use Dktaylor\BundleGeneratorBundle\ComposerManager;
 use Dktaylor\BundleGeneratorBundle\ComposerQuestionManager;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'dktaylor:generate-bundle-skeleton',
     description: 'Generate a Symfony bundle skeleton for a new bundle',
+    aliases: ['make:bundle'],
 )]
 class GenerateBundleSkeletonCommand extends Command
 {

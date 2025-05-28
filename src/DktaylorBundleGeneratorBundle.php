@@ -2,6 +2,8 @@
 
 namespace Dktaylor\BundleGeneratorBundle;
 
+use Dktaylor\BundleGeneratorBundle\Handler\DirectoryGeneratorHandlerInterface;
+use Dktaylor\BundleGeneratorBundle\Handler\FileGeneratorHandlerInterface;
 use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass;
 use Doctrine\ORM\Mapping\Driver\AttributeDriver;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -18,14 +20,22 @@ class DktaylorBundleGeneratorBundle extends AbstractBundle
     {
         $container->import(__DIR__ . '/../config/services.xml');
 
+        $builder
+            ->registerForAutoconfiguration(DirectoryGeneratorHandlerInterface::class)
+            ->addTag('dktaylor_bundle_generator.directory_generator_handler');
+
+        $builder
+            ->registerForAutoconfiguration(FileGeneratorHandlerInterface::class)
+            ->addTag('dktaylor_bundle_generator.file_generator_handler');
+
         // Modify services...
     }
 
     public function build(ContainerBuilder $container): void
     {
-        // Uncomment the following two lines to enable doctrine mappings
+        parent::build($container);
+        // Uncomment the following line to enable doctrine mappings
         // Place doctrine xml files into {project_dir}/config/doctrine folder
-        //parent::build($container);
         //$this->addDoctrineOrmCompilerPass($container);
 
         // Add other tasks below here
