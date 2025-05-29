@@ -5,6 +5,17 @@
            https://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="dktaylor.bundle_generator.file_manager_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FileManagerFactory">
+            <argument type="service" id="filesystem" />
+            <argument type="service" id="maker.autoloader_util" />
+            <argument type="service" id="maker.file_link_formatter" />
+        </service>
+
+        <service  id="dktaylor.bundle_generator.generator_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactory">
+            <argument type="service" id="dktaylor.bundle_generator.file_manager_factory" />
+            <argument type="service" id="maker.template_component_generator" />
+        </service>
+
         <service id="dktaylor.bundle_generator.make_bundle" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
             <argument type="service" id="dktaylor.bundle_generator.generator_factory" />
             <tag name="maker.command" />
