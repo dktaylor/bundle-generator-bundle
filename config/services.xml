@@ -5,6 +5,11 @@
            https://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
+        <service id="dktaylor.bundle_generator.make_bundle" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
+            <argument type="service" id="dktaylor.bundle_generator.generator_factory" />
+            <tag name="maker.command" />
+        </service>
+
         <service id="dktaylor.bundle_generator.kernel_utility" class="Dktaylor\BundleGeneratorBundle\KernelUtility">
             <argument type="service" id="kernel" />
         </service>
