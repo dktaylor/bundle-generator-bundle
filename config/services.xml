@@ -5,55 +5,22 @@
            https://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
-        <service id="dktaylor.bundle_generator.kernel_utility" class="Dktaylor\BundleGeneratorBundle\KernelUtility">
-            <argument type="service" id="kernel" />
-        </service>
-        <service id="dktaylor.bundle_generator.string_utility" class="Dktaylor\BundleGeneratorBundle\StringUtility" />
-        <service id="dktaylor.bundle_generator.answer_collection" class="Dktaylor\BundleGeneratorBundle\AnswerCollection" />
-        <service id="dktaylor.bundle_generator.bundle_manager" class="Dktaylor\BundleGeneratorBundle\BundleManager" autowire="true">
-            <argument type="tagged_iterator" tag="dktaylor_bundle_generator.directory_generator_handler" />
-            <argument type="tagged_iterator" tag="dktaylor_bundle_generator.file_generator_handler" />
+        <service id="dktaylor.bundle_generator.file_manager_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FileManagerFactory">
             <argument type="service" id="filesystem" />
-            <argument type="service" id="dktaylor.bundle_generator.kernel_utility" />
-            <argument type="string">/lib</argument><!-- TODO: add this to configuration -->
-        </service>
-        <service id="dktaylor.bundle_generator.bundle_question_manager" class="Dktaylor\BundleGeneratorBundle\BundleQuestionManager" autowire="true">
-            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
-        </service>
-        <service id="dktaylor.bundle_generator.composer_manager" class="Dktaylor\BundleGeneratorBundle\ComposerManager" autowire="true">
-            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
-        </service>
-        <service id="dktaylor.bundle_generator.composer_question_manager" class="Dktaylor\BundleGeneratorBundle\ComposerQuestionManager" autowire="true">
-            <argument type="service" id="dktaylor.bundle_generator.answer_collection" />
-        </service>
-        <service id="dktaylor.bundle_generator.generate_bundle_command" class="Dktaylor\BundleGeneratorBundle\Command\GenerateBundleSkeletonCommand" autowire="true">
-            <argument type="service" id="dktaylor.bundle_generator.bundle_question_manager" />
-            <argument type="service" id="dktaylor.bundle_generator.composer_question_manager" />
-            <argument type="service" id="dktaylor.bundle_generator.bundle_manager" />
-            <argument type="service" id="dktaylor.bundle_generator.composer_manager" />
-            <tag name="console.command" command="dktaylor:generate-bundle-skeleton" />
+            <argument type="service" id="maker.autoloader_util" />
+            <argument type="service" id="maker.file_link_formatter" />
         </service>
 
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\AssetsDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\ConfigDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\DocsDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\PublicDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\SrcDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TemplatesDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TestsDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\Directory\TranslationsDirectoryHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\BundlePhpFileHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\DocsIndexFileHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\LicenseFileHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\ReadmeMdFileHandler" />
-        <service id="Dktaylor\BundleGeneratorBundle\Handler\File\ServicesXmlFileHandler" />
+        <service  id="dktaylor.bundle_generator.generator_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactory">
+            <argument type="service" id="dktaylor.bundle_generator.file_manager_factory" />
+            <argument type="service" id="maker.template_component_generator" />
+        </service>
 
-        <instanceof id="Dktaylor\BundleGeneratorBundle\Handler\DirectoryGeneratorHandlerInterface" autowire="true">
-            <tag name="dktaylor_bundle_generator.directory_generator_handler" />
-        </instanceof>
-
-        <instanceof id="Dktaylor\BundleGeneratorBundle\Handler\FileGeneratorHandlerInterface" autowire="true">
-            <tag name="dktaylor_bundle_generator.file_generator_handler" />
-        </instanceof>
+        <service id="dktaylor.bundle_generator.make_bundle" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
+            <argument type="service" id="dktaylor.bundle_generator.generator_factory" />
+            <argument type="service" id="maker.autoloader_finder" />
+            <argument type="service" id="filesystem" />
+            <tag name="maker.command" />
+        </service>
     </services>
 </container>
