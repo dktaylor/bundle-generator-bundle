@@ -10,8 +10,10 @@ use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
 use Symfony\Bundle\MakerBundle\Maker\AbstractMaker;
 use Symfony\Bundle\MakerBundle\Str;
+use Symfony\Bundle\MakerBundle\Util\ComposerAutoloaderFinder;
 use Symfony\Bundle\MakerBundle\Util\UseStatementGenerator;
 use Symfony\Bundle\MakerBundle\Validator;
+use Symfony\Component\Asset\Exception\LogicException;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -19,6 +21,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 /**
@@ -28,6 +31,8 @@ class MakeSymfonyBundle extends AbstractMaker
 {
     public function __construct(
         private readonly GeneratorFactory $generatorFactory,
+        private readonly Filesystem $filesystem,
+        private readonly ComposerAutoloaderFinder $composerAutoloaderFinder,
     ) {}
 
     /**
@@ -53,7 +58,7 @@ class MakeSymfonyBundle extends AbstractMaker
     {
         $command
             ->addArgument('bundle', InputArgument::OPTIONAL, 'The name of the bundle (e.g. <fg=yellow>AcmeDemoBundle</>)')
-            ->setHelp(file_get_contents(__DIR__.'/Resources/help/MakeSymfonyBundle.txt'));
+            ->setHelp(file_get_contents(realpath(__DIR__ . '/../../../config/help/MakeSymfonyBundle.txt')));
     }
 
     /**
@@ -78,8 +83,7 @@ class MakeSymfonyBundle extends AbstractMaker
             $io->error('The bundle name must end with \'Bundle\'');
         }
 
-        $defaultShortClassName = Str::getShortClassName($bundle);
-        $defaultExtensionAlias = Str::asSnakeCase($defaultShortClassName);
+        $defaultExtensionAlias = Str::asSnakeCase($words[0].$words[1]);
         $extensionAlias = $io->ask('What extension alias should be used?', $defaultExtensionAlias, Validator::notBlank(...));
 
         $namespacePrefix = trim($words[0].'\\'.$words[1].$words[2], '\\');
@@ -90,21 +94,10 @@ class MakeSymfonyBundle extends AbstractMaker
             $namespacePrefix,
             $generator->getRootDirectory() . '/../' . $bundleName
         );
-        dump($bundleGenerator->getRootNamespace());
 
-        $entityClassDetails = $bundleGenerator->createClassNameDetails(
-            $bundle,
-            '',
-            'Bundle'
-        );
-
-        $fullName = $entityClassDetails->getFullName();
-        dump($fullName);
-
-        $rootDir = $bundleGenerator->getRootDirectory();
-        dump($rootDir);
-
-        dump($bundleGenerator->hasPendingOperations() ? "true" : "false");
+        // We have to fool the AutoloaderUtil in FileManager
+        $classLoader = $this->composerAutoloaderFinder->getClassLoader();
+        $classLoader->addPsr4($bundleGenerator->getRootNamespace().'\\', $bundleGenerator->getRootDirectory(). 'src/');
 
         $useStatements = new UseStatementGenerator([
             AbstractBundle::class,
@@ -116,15 +109,32 @@ class MakeSymfonyBundle extends AbstractMaker
             AttributeDriver::class
         ]);
 
+        $entityClassDetails = $bundleGenerator->createClassNameDetails(
+            $bundle,
+            '\\',
+            'Bundle'
+        );
+
         $bundleGenerator->generateClass(
             $entityClassDetails->getFullName(),
-            'bundle/Bundle.tpl.php',
+            $this->getTemplatePath('bundle/Bundle.tpl.php'),
             [
                 'use_statements' => $useStatements,
                 'extension_alias' => $extensionAlias,
             ]
         );
 
-//        $bundleGenerator->writeChanges();
+        $bundleGenerator->writeChanges();
+    }
+
+    private function getTemplatePath(string $templateName): string
+    {
+        $path = realpath(__DIR__.'/../../../templates/');
+
+        if (!file_exists($path.$templateName)) {
+            throw new LogicException('The template "'.$templateName.'" does not exist.');
+        }
+
+        return $path.$templateName;
     }
 }

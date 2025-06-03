@@ -23,7 +23,7 @@ class FileManagerFactory
             $this->autoloaderUtil,
             $this->makerFileLinkFormatter,
             $bundleDir,
-            null,
+            realpath(__DIR__ . '/../../../templates'),
         );
     }
 }

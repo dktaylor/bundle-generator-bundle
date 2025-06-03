@@ -6,7 +6,7 @@ namespace <?= $namespace; ?>;
 
 class <?= $class_name; ?> extends Command
 {
-    protected string $extensionAlias = <?= $extension_alias; ?>;
+    protected string $extensionAlias = '<?= $extension_alias; ?>';
 
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
@@ -32,7 +32,7 @@ class <?= $class_name; ?> extends Command
         $ormCompilerClass = DoctrineOrmMappingsPass::class;
 
         if (class_exists($ormCompilerPass)) {
-            $namespaces = ['<?= $namespace; ?>];
+            $namespaces = ['<?= $namespace; ?>'];
             $directories = [
                 // Change this to the directory where the bundle ORM models will reside
                 realpath(__DIR__ . '/ORM/Model')
