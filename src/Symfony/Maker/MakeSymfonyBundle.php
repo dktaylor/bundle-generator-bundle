@@ -6,6 +6,7 @@ use Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappi
 use Doctrine\ORM\Mapping\Driver\AttributeDriver;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
+use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
 use Symfony\Bundle\MakerBundle\Maker\AbstractMaker;
@@ -18,6 +19,9 @@ use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -57,15 +61,42 @@ class MakeSymfonyBundle extends AbstractMaker
     public function configureCommand(Command $command, InputConfiguration $inputConfig)
     {
         $command
-            ->addArgument('bundle', InputArgument::OPTIONAL, 'The name of the bundle (e.g. <fg=yellow>AcmeDemoBundle</>)')
-            ->setHelp(file_get_contents(realpath(__DIR__ . '/../../../config/help/MakeSymfonyBundle.txt')));
+            ->addArgument('bundle', InputArgument::OPTIONAL, 'What is the full name of the bundle? (e.g. <fg=yellow>AcmeDemoBundle</>)')
+            ->addOption('extension-alias', null, InputOption::VALUE_REQUIRED, 'What extension alias should be used by the bundle? (e.g. <fg=yellow>acme_demo</>)')
+            ->addOption('do-init-composer', null, InputOption::VALUE_NONE, 'Should composer be initialized for the bundle?')
+            ->setHelp($this->getMakerHelpFileContents('MakeSymfonyBundle.txt'));
+
+        $inputConfig->setArgumentAsNonInteractive('bundle');
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function configureDependencies(DependencyBuilder $dependencies)
+    public function interact(InputInterface $input, ConsoleStyle $io, Command $command): void
     {
+        $bundleInputWordSplitter = $this->getBundleNameWordSplitter();
+
+        $argument = $command->getDefinition()->getArgument('bundle');
+        $question = new Question($argument->getDescription());
+        $question->setValidator(self::validateFullBundleName(...));
+        $bundle ??= $io->askQuestion($question);
+        $input->setArgument('bundle', $bundle);
+
+        $words = $bundleInputWordSplitter($input->getArgument('bundle'));
+        $defaultExtensionAlias = Str::asSnakeCase($words[0].$words[1]);
+        if (null === $input->getOption('extension-alias')) {
+            $extensionAlias = $io->ask(
+                $command->getDefinition()->getOption('extension-alias')->getDescription(),
+                $defaultExtensionAlias,
+                Validator::notBlank(...)
+            );
+            $input->setOption('extension-alias', $extensionAlias);
+        }
+
+        $doInitComposer = $io->confirm(
+            'Do you want to initialize composer for the bundle?',
+            true,
+        );
+        $input->setOption('do-init-composer', $doInitComposer);
+
+
     }
 
     /**
@@ -73,31 +104,24 @@ class MakeSymfonyBundle extends AbstractMaker
      */
     public function generate(InputInterface $input, ConsoleStyle $io, Generator $generator)
     {
-        $bundle = $input->getArgument('bundle');
-        $words = preg_split('~(?=[A-Z][^A-Z])~', $bundle, -1, PREG_SPLIT_NO_EMPTY);
-        if (count($words) < 3) {
-            $io->error('The bundle name must contain at least 3 words distinguishable by uppercase alphabet characters. e.g. AcmeDemoBundle');
-        }
-
-        if (end($words) !== 'Bundle') {
-            $io->error('The bundle name must end with \'Bundle\'');
-        }
-
-        $defaultExtensionAlias = Str::asSnakeCase($words[0].$words[1]);
-        $extensionAlias = $io->ask('What extension alias should be used?', $defaultExtensionAlias, Validator::notBlank(...));
-
+        $bundleInputWordSplitter = $this->getBundleNameWordSplitter();
+        $words = $bundleInputWordSplitter($input->getArgument('bundle'));
         $namespacePrefix = trim($words[0].'\\'.$words[1].$words[2], '\\');
-        $bundleName = trim($words[1].$words[2], '\\');
+        $bundleShortName = trim($words[1].$words[2], '\\');
+
         // Create a custom generator with the Prefix of the specific bundle.
         // Don't overwrite the original generator in case it is needed.
+        $bundleDir = dirname($generator->getRootDirectory()). '/' . $bundleShortName;
         $bundleGenerator = $this->generatorFactory->create(
             $namespacePrefix,
-            $generator->getRootDirectory() . '/../' . $bundleName
+            $bundleDir,
         );
 
         // We have to fool the AutoloaderUtil in FileManager
         $classLoader = $this->composerAutoloaderFinder->getClassLoader();
-        $classLoader->addPsr4($bundleGenerator->getRootNamespace().'\\', $bundleGenerator->getRootDirectory(). 'src/');
+        $psr4Namespace = $bundleGenerator->getRootNamespace().'\\';
+        $psr4Src = $bundleGenerator->getRootDirectory(). '/src/';
+        $classLoader->addPsr4($psr4Namespace, $psr4Src);
 
         $useStatements = new UseStatementGenerator([
             AbstractBundle::class,
@@ -110,31 +134,69 @@ class MakeSymfonyBundle extends AbstractMaker
         ]);
 
         $entityClassDetails = $bundleGenerator->createClassNameDetails(
-            $bundle,
+            $bundleShortName,
             '\\',
             'Bundle'
         );
 
-        $bundleGenerator->generateClass(
+        $targetPath = $bundleGenerator->generateClass(
             $entityClassDetails->getFullName(),
             $this->getTemplatePath('bundle/Bundle.tpl.php'),
             [
                 'use_statements' => $useStatements,
-                'extension_alias' => $extensionAlias,
+                'extension_alias' => $input->getOption('extension-alias'),
             ]
         );
 
         $bundleGenerator->writeChanges();
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function configureDependencies(DependencyBuilder $dependencies)
+    {
+    }
+
     private function getTemplatePath(string $templateName): string
     {
-        $path = realpath(__DIR__.'/../../../templates/');
+        $path = dirname(__DIR__, 3) . '/templates/';
 
-        if (!file_exists($path.$templateName)) {
-            throw new LogicException('The template "'.$templateName.'" does not exist.');
+        $templateFile = $path.$templateName;
+        if (!file_exists($templateFile)) {
+            throw new LogicException('The template "'.$templateFile.'" does not exist.');
         }
 
         return $path.$templateName;
+    }
+
+    private function getMakerHelpFileContents(string $helpFileName): string
+    {
+        return file_get_contents(\sprintf('%s/config/help/%s', \dirname(__DIR__, 3), $helpFileName));
+    }
+
+    private function getBundleNameWordSplitter(): callable
+    {
+        return function (string $bundle): bool|array {
+            return explode(" ", Str::asHumanWords(Str::asCamelCase($bundle)));
+        };
+    }
+
+    public static function validateFullBundleName(?string $value = null): string
+    {
+        $value = Validator::notBlank($value);
+
+        $words = explode(" ", Str::asHumanWords(Str::asCamelCase($value)));
+        if (!$words) {
+            throw new RuntimeCommandException('Unable to parse bundle name.');
+        }
+        if (count($words) < 3) {
+            throw new RuntimeCommandException('The bundle name must contain at least 3 words distinguishable by uppercase alphabet characters. e.g. AcmeDemoBundle');
+        }
+        if (end($words) !== 'Bundle') {
+            throw new RuntimeCommandException('The bundle name must end with \'Bundle\'');
+        }
+
+        return $value;
     }
 }
