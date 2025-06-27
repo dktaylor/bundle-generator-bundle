@@ -4,7 +4,7 @@ namespace <?= $namespace; ?>;
 
 <?= $use_statements; ?>
 
-class <?= $class_name; ?> extends Command
+class <?= $class_name; ?> extends AbstractBundle
 {
     protected string $extensionAlias = '<?= $extension_alias; ?>';
 

@@ -20,13 +20,12 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use Symfony\Component\Process\Process;
 
 /**
  * @method string getCommandDescription()
@@ -35,7 +34,6 @@ class MakeSymfonyBundle extends AbstractMaker
 {
     public function __construct(
         private readonly GeneratorFactory $generatorFactory,
-        private readonly Filesystem $filesystem,
         private readonly ComposerAutoloaderFinder $composerAutoloaderFinder,
     ) {}
 
@@ -64,6 +62,8 @@ class MakeSymfonyBundle extends AbstractMaker
             ->addArgument('bundle', InputArgument::OPTIONAL, 'What is the full name of the bundle? (e.g. <fg=yellow>AcmeDemoBundle</>)')
             ->addOption('extension-alias', null, InputOption::VALUE_REQUIRED, 'What extension alias should be used by the bundle? (e.g. <fg=yellow>acme_demo</>)')
             ->addOption('do-init-composer', null, InputOption::VALUE_NONE, 'Should composer be initialized for the bundle?')
+            ->addOption('author-name', null, InputOption::VALUE_NONE, 'The name of the author; used if composer-init is true')
+            ->addOption('bundle-description', null, InputOption::VALUE_NONE, 'A brief description of the bundle')
             ->setHelp($this->getMakerHelpFileContents('MakeSymfonyBundle.txt'));
 
         $inputConfig->setArgumentAsNonInteractive('bundle');
@@ -74,20 +74,15 @@ class MakeSymfonyBundle extends AbstractMaker
         $bundleInputWordSplitter = $this->getBundleNameWordSplitter();
 
         $argument = $command->getDefinition()->getArgument('bundle');
-        $question = new Question($argument->getDescription());
-        $question->setValidator(self::validateFullBundleName(...));
-        $bundle ??= $io->askQuestion($question);
+        $bundleNameQuestion = new Question($argument->getDescription());
+        $bundleNameQuestion->setValidator(self::validateFullBundleName(...));
+        $bundle ??= $io->askQuestion($bundleNameQuestion);
         $input->setArgument('bundle', $bundle);
 
         $words = $bundleInputWordSplitter($input->getArgument('bundle'));
         $defaultExtensionAlias = Str::asSnakeCase($words[0].$words[1]);
         if (null === $input->getOption('extension-alias')) {
-            $extensionAlias = $io->ask(
-                $command->getDefinition()->getOption('extension-alias')->getDescription(),
-                $defaultExtensionAlias,
-                Validator::notBlank(...)
-            );
-            $input->setOption('extension-alias', $extensionAlias);
+            $input->setOption('extension-alias', $defaultExtensionAlias);
         }
 
         $doInitComposer = $io->confirm(
@@ -96,7 +91,18 @@ class MakeSymfonyBundle extends AbstractMaker
         );
         $input->setOption('do-init-composer', $doInitComposer);
 
+        if ($doInitComposer) {
+            $authorNameQuestion = new Question('Author Name? (e.g. Jane Smith)');
+            $authorNameQuestion->setValidator(self::validateComposerAuthorName(...));
+            $authorName = $io->askQuestion($authorNameQuestion);
+            $input->setOption('author-name', $authorName);
 
+            $descriptionArgument = $command->getDefinition()->getOption('bundle-description');
+            $projDescriptionQuestion = new Question($descriptionArgument->getDescription());
+            $projDescriptionQuestion->setValidator(self::validateBundleDescription(...));
+            $projDescription = $io->askQuestion($projDescriptionQuestion);
+            $input->setOption('bundle-description', $projDescription);
+        }
     }
 
     /**
@@ -107,11 +113,13 @@ class MakeSymfonyBundle extends AbstractMaker
         $bundleInputWordSplitter = $this->getBundleNameWordSplitter();
         $words = $bundleInputWordSplitter($input->getArgument('bundle'));
         $namespacePrefix = trim($words[0].'\\'.$words[1].$words[2], '\\');
+        $packageName = strtolower(trim($words[0].'/'.$words[1].'_'.$words[2], '\\'));
+        $bundleFullName = trim($words[0].$words[1].$words[2], '\\');
         $bundleShortName = trim($words[1].$words[2], '\\');
 
         // Create a custom generator with the Prefix of the specific bundle.
         // Don't overwrite the original generator in case it is needed.
-        $bundleDir = dirname($generator->getRootDirectory()). '/' . $bundleShortName;
+        $bundleDir = dirname($generator->getRootDirectory()). '/' . $bundleFullName;
         $bundleGenerator = $this->generatorFactory->create(
             $namespacePrefix,
             $bundleDir,
@@ -133,14 +141,14 @@ class MakeSymfonyBundle extends AbstractMaker
             AttributeDriver::class
         ]);
 
-        $entityClassDetails = $bundleGenerator->createClassNameDetails(
-            $bundleShortName,
+        $bundleClassNameDetails = $bundleGenerator->createClassNameDetails(
+            $bundleFullName,
             '\\',
             'Bundle'
         );
 
-        $targetPath = $bundleGenerator->generateClass(
-            $entityClassDetails->getFullName(),
+        $bundleGenerator->generateClass(
+            $bundleClassNameDetails->getFullName(),
             $this->getTemplatePath('bundle/Bundle.tpl.php'),
             [
                 'use_statements' => $useStatements,
@@ -148,7 +156,54 @@ class MakeSymfonyBundle extends AbstractMaker
             ]
         );
 
+        $bundleGenerator->generateFile(
+            $bundleDir.'/docs/index.rst',
+            $this->getTemplatePath('bundle/DocIndex.tpl.php'),
+            [
+                'vendor' => $words[0],
+                'bundleShortName' => $bundleShortName,
+            ]
+        );
+
+        $bundleGenerator->generateFile(
+            $bundleDir.'/README.md',
+            $this->getTemplatePath('bundle/Readme.tpl.php'),
+            [
+                'vendor' => $words[0],
+                'bundleShortName' => $bundleShortName,
+            ]
+        );
+
+        $bundleGenerator->generateFile(
+            $bundleDir.'/config/services.xml',
+            $this->getTemplatePath('bundle/Services.tpl.php'),
+            []
+        );
+
         $bundleGenerator->writeChanges();
+
+        $phpMajorMinor = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
+        $cmd = [
+            "composer",
+            "init",
+            "--no-interaction",
+            "--working-dir={$bundleDir}",
+            "--name={$packageName}",
+            "--description={$input->getOption('bundle-description')}",
+            "--author={$input->getOption('author-name')}",
+            "--type=symfony-bundle",
+            "--stability=stable",
+            "--autoload=src/",
+            "--require=php:^{$phpMajorMinor}"
+        ];
+
+        $process = new Process($cmd);
+        $process->setTimeout(60);
+        $process->run(
+            function ($type, $buffer) use ($io) {
+                $io->writeln((Process::ERR === $type ? 'ERR' : 'OK') . ' ' . $buffer);
+            }
+        );
     }
 
     /**
@@ -156,6 +211,10 @@ class MakeSymfonyBundle extends AbstractMaker
      */
     public function configureDependencies(DependencyBuilder $dependencies)
     {
+        $dependencies->addClassDependency(
+            Process::class,
+            'process'
+        );
     }
 
     private function getTemplatePath(string $templateName): string
@@ -195,6 +254,26 @@ class MakeSymfonyBundle extends AbstractMaker
         }
         if (end($words) !== 'Bundle') {
             throw new RuntimeCommandException('The bundle name must end with \'Bundle\'');
+        }
+
+        return $value;
+    }
+
+    public static function validateComposerAuthorName(?string $value = null): string
+    {
+        $value = Validator::notBlank($value);
+
+        if (strlen($value) < 3) {
+            throw new RuntimeCommandException('The author\'s name must be at least 3 characters long.');
+        }
+
+        return $value;
+    }
+
+    public static function validateBundleDescription(?string $value = null): string
+    {
+        if (strlen($value) > 100) {
+            throw new RuntimeCommandException('The description is too long. Keep the length under 100 characters.');
         }
 
         return $value;
