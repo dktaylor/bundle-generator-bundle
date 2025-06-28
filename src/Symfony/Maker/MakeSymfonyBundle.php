@@ -24,6 +24,7 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use Symfony\Component\Process\Process;
 
@@ -35,6 +36,7 @@ class MakeSymfonyBundle extends AbstractMaker
     public function __construct(
         private readonly GeneratorFactory $generatorFactory,
         private readonly ComposerAutoloaderFinder $composerAutoloaderFinder,
+        private readonly Filesystem $filesystem,
     ) {}
 
     /**
@@ -111,10 +113,10 @@ class MakeSymfonyBundle extends AbstractMaker
     public function generate(InputInterface $input, ConsoleStyle $io, Generator $generator)
     {
         $bundleInputWordSplitter = $this->getBundleNameWordSplitter();
-        $words = $bundleInputWordSplitter($input->getArgument('bundle'));
+        $bundleFullName = $input->getArgument('bundle');
+        $words = $bundleInputWordSplitter($bundleFullName);
         $namespacePrefix = trim($words[0].'\\'.$words[1].$words[2], '\\');
         $packageName = strtolower(trim($words[0].'/'.$words[1].'_'.$words[2], '\\'));
-        $bundleFullName = trim($words[0].$words[1].$words[2], '\\');
         $bundleShortName = trim($words[1].$words[2], '\\');
 
         // Create a custom generator with the Prefix of the specific bundle.
@@ -176,14 +178,13 @@ class MakeSymfonyBundle extends AbstractMaker
 
         $bundleGenerator->generateFile(
             $bundleDir.'/config/services.xml',
-            $this->getTemplatePath('bundle/Services.tpl.php'),
-            []
+            $this->getTemplatePath('bundle/Services.tpl.php')
         );
 
         $bundleGenerator->writeChanges();
 
         $phpMajorMinor = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
-        $cmd = [
+        $initBundleCmd = [
             "composer",
             "init",
             "--no-interaction",
@@ -194,16 +195,36 @@ class MakeSymfonyBundle extends AbstractMaker
             "--type=symfony-bundle",
             "--stability=stable",
             "--autoload=src/",
-            "--require=php:^{$phpMajorMinor}"
+            "--require=php:^{$phpMajorMinor}",
         ];
 
-        $process = new Process($cmd);
-        $process->setTimeout(60);
-        $process->run(
-            function ($type, $buffer) use ($io) {
-                $io->writeln((Process::ERR === $type ? 'ERR' : 'OK') . ' ' . $buffer);
-            }
-        );
+        (new Process($initBundleCmd))
+            ->setTimeout(60)
+            ->run(function ($type, $buffer) use ($io) {
+                $io->writeln(($type == Process::OUT ? 'OK' : 'ERR') . ' ' . $buffer);
+            })
+        ;
+
+        $this->filesystem->symlink($bundleDir, $generator->getRootDirectory(). '/lib/'.$bundleFullName);
+
+        if (!$this->hasLibRepo($generator->getRootDirectory())) {
+            $addBundleRepoCmd = [
+                "composer",
+                "config",
+                "--no-interaction",
+                "--working-dir={$generator->getRootDirectory()}",
+                "repositories.lib",
+                "path",
+                "lib/*",
+            ];
+
+            (new Process($addBundleRepoCmd))
+                ->setTimeout(60)
+                ->run(function ($type, $buffer) use ($io) {
+                    $io->writeln(($type == Process::OUT ? 'OK' : 'ERR') . ' ' . $buffer);
+                })
+            ;
+        }
     }
 
     /**
@@ -215,30 +236,11 @@ class MakeSymfonyBundle extends AbstractMaker
             Process::class,
             'process'
         );
-    }
 
-    private function getTemplatePath(string $templateName): string
-    {
-        $path = dirname(__DIR__, 3) . '/templates/';
-
-        $templateFile = $path.$templateName;
-        if (!file_exists($templateFile)) {
-            throw new LogicException('The template "'.$templateFile.'" does not exist.');
-        }
-
-        return $path.$templateName;
-    }
-
-    private function getMakerHelpFileContents(string $helpFileName): string
-    {
-        return file_get_contents(\sprintf('%s/config/help/%s', \dirname(__DIR__, 3), $helpFileName));
-    }
-
-    private function getBundleNameWordSplitter(): callable
-    {
-        return function (string $bundle): bool|array {
-            return explode(" ", Str::asHumanWords(Str::asCamelCase($bundle)));
-        };
+        $dependencies->addClassDependency(
+            Filesystem::class,
+            'filesystem'
+        );
     }
 
     public static function validateFullBundleName(?string $value = null): string
@@ -277,5 +279,52 @@ class MakeSymfonyBundle extends AbstractMaker
         }
 
         return $value;
+    }
+
+
+    private function getTemplatePath(string $templateName): string
+    {
+        $path = dirname(__DIR__, 3) . '/templates/';
+
+        $templateFile = $path.$templateName;
+        if (!file_exists($templateFile)) {
+            throw new LogicException('The template "'.$templateFile.'" does not exist.');
+        }
+
+        return $path.$templateName;
+    }
+
+    private function getMakerHelpFileContents(string $helpFileName): string
+    {
+        return file_get_contents(\sprintf('%s/config/help/%s', \dirname(__DIR__, 3), $helpFileName));
+    }
+
+    private function getBundleNameWordSplitter(): callable
+    {
+        return function (string $bundle): bool|array {
+            return explode(" ", Str::asHumanWords(Str::asCamelCase($bundle)));
+        };
+    }
+
+    private function getProjectComposerJsonData(string $directory): array
+    {
+        $composerJson = file_get_contents($directory. '/composer.json');
+
+        return json_decode($composerJson, true);
+    }
+
+    private function hasLibRepo(string $directory): bool
+    {
+        $composerData = $this->getProjectComposerJsonData($directory);
+        if (isset($composerData['repositories'])) {
+            $repositories = $composerData['repositories'];
+            foreach ($repositories as $repository) {
+                if ($repository['url'] === "lib/*") {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

@@ -19,6 +19,7 @@
         <service id="dktaylor.bundle_generator.make_bundle" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
             <argument type="service" id="dktaylor.bundle_generator.generator_factory" />
             <argument type="service" id="maker.autoloader_finder" />
+            <argument type="service" id="filesystem" />
             <tag name="maker.command" />
         </service>
 
