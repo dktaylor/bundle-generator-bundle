@@ -44,7 +44,7 @@ class MakeSymfonyBundle extends AbstractMaker
      */
     public static function getCommandName(): string
     {
-        return 'make:bundle:symfony';
+        return 'make:bundle';
     }
 
     /**

@@ -20,14 +20,6 @@ class DktaylorBundleGeneratorBundle extends AbstractBundle
     {
         $container->import(__DIR__ . '/../config/services.xml');
 
-        $builder
-            ->registerForAutoconfiguration(DirectoryGeneratorHandlerInterface::class)
-            ->addTag('dktaylor_bundle_generator.directory_generator_handler');
-
-        $builder
-            ->registerForAutoconfiguration(FileGeneratorHandlerInterface::class)
-            ->addTag('dktaylor_bundle_generator.file_generator_handler');
-
         // Modify services...
     }
 
