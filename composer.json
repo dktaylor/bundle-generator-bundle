@@ -2,6 +2,7 @@
     "name": "dktaylor/bundle-generator-bundle",
     "description": "A Symfony bundle to help generate Symfony bundles",
     "type": "symfony-bundle",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "Dktaylor\\BundleGeneratorBundle\\": "src/"
