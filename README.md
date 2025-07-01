@@ -43,23 +43,18 @@ return [
 Setup local repository for bundle development
 ---------------------------------------------
 
-The bundle is configured to generate the Bundle one level up the tree from the current project root.
+The bundle is configured to generate the Bundle one level up the directory tree from the current project root.
 
 e.g.: If your application is in *~/Projects/my-project* then generating a bundle skeleton would place said bundle in *~/Projects/new-bundle*.
 
-These bundles are then symlinked into the current project in *~/Projects/my-project/lib*.
+These bundles are then symlinked into the current project in *~/Projects/my-project/lib/new-bundle-name*.
 
-For this to work properly, update the composer.json for the main project to include a custom repository like the following.
+A repository declaration will be added to the composer.json of the main project that will load any bundles from the `~/Projects/my-project/lib/` directory.
 
-```json
-{
-  "repositories": [
-    {
-      "type": "path",
-      "url": "lib/*"
-    }
-  ]
-}
+Running the `maker:bundle` maker will prompt for several inputs and can generate a basic, minimalist, composer.json as well.
+
+Run the following from a Symfony project root to generate a Symfony bundle.
+
+```shell
+bin/console make:bundle
 ```
-
-Running `dktaylor:generate-bundle-skeleton` will prompt for several inputs and can generate a basic, minimalist, composer.json as well.
