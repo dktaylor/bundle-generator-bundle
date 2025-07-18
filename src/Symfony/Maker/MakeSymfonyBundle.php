@@ -137,7 +137,7 @@ class MakeSymfonyBundle extends AbstractMaker
             AbstractBundle::class,
             ContainerConfigurator::class,
             ContainerBuilder::class,
-            DefinitionConfigurator::class,use
+            DefinitionConfigurator::class,
             Definition::class,
             AttributeDriver::class
         ]);
