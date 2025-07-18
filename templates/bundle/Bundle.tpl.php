@@ -27,11 +27,11 @@ class <?= $class_name; ?> extends AbstractBundle
         // Build the bundle configuration here
     }
 
-    private function addDoctrineOrmCompilerPass(ContainerBuilder $builder): void
+    private function addDoctrineOrmCompilerPass(ContainerBuilder $container): void
     {
-        $ormCompilerClass = DoctrineOrmMappingsPass::class;
+        $ormCompilerClass = "Doctrine\Bundle\DoctrineBundle\DependencyInjection\Compiler\DoctrineOrmMappingsPass";
 
-        if (class_exists($ormCompilerPass)) {
+        if (class_exists($ormCompilerClass)) {
             $namespaces = ['<?= $namespace; ?>'];
             $directories = [
                 // Change this to the directory where the bundle ORM models will reside
@@ -39,7 +39,7 @@ class <?= $class_name; ?> extends AbstractBundle
             ];
             $manageParameters = [];
             $container->addCompilerPass(
-                new $ormCompilerPass(
+                new $ormCompilerClass(
                     new Definition(AttributeDriver::class, [$directories]),
                     $namespaces,
                     $manageParameters
