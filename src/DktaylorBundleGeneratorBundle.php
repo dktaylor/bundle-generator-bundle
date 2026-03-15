@@ -21,6 +21,10 @@ class DktaylorBundleGeneratorBundle extends AbstractBundle
         $container->import(__DIR__ . '/../config/services.xml');
 
         // Modify services...
+        $builder->setParameter(
+            'dktaylor_bundle_generator.bundle_root_dir',
+            dirname(__DIR__, 3)
+        );
     }
 
     public function build(ContainerBuilder $container): void

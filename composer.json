@@ -17,6 +17,8 @@
     "minimum-stability": "stable",
     "require": {
         "php": "^8.3",
+        "ext-http": "*",
+        "ext-xml": "*",
         "symfony/maker-bundle": "^1.63",
         "symfony/console": "^6.4",
         "symfony/filesystem": "^6.4",
@@ -25,8 +27,8 @@
         "symfony/finder": "^6.4",
         "symfony/process": "^6.4",
         "symfony/config": "^6.4",
-        "symfony/http-kernel": "^6.4"
+        "symfony/http-kernel": "^6.4",
+        "symfony/framework-bundle": "^6.4",
+        "doctrine/orm": "^3.6"
     }
 }
-
-

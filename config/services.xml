@@ -2,25 +2,97 @@
 <container xmlns="http://symfony.com/schema/dic/services"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://symfony.com/schema/dic/services
-           https://symfony.com/schema/dic/services/services-1.0.xsd">
+               https://symfony.com/schema/dic/services/services-1.0.xsd">
 
     <services>
-        <service id="dktaylor.bundle_generator.file_manager_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FileManagerFactory">
+
+        <!-- Utilities -->
+
+        <service id="dktaylor.bundle_generator.safe_name_resolver"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\SafeNameResolver" />
+
+        <service id="dktaylor.bundle_generator.process_runner"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ProcessRunner" />
+
+        <service id="dktaylor.bundle_generator.composer_json_reader"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerJsonReader" >
+            <argument type="service" id="filesystem" />
+        </service>
+
+        <service id="dktaylor.bundle_generator.template_resolver"
+                 class="Dktaylor\BundlerGeneratorBundler\Symfony\Maker\TemplateResolver">
+            <argument>%dktaylor_bundle_generator.bundle_root_dir%</argument>
+        </service>
+
+        <!-- Filesystem -->
+
+        <service id="dktaylor.bundle_generator.filesystem_manager"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FilesystemManager">
+            <argument type="service" id="filesystem" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\SafeNameResolver" />
+        </service>
+
+        <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\Factory\FilesystemManagerInterface"
+                 service="dktaylor.bundle_generator.filesystem_manager" />
+
+        <!-- Composer -->
+
+        <service id="dktaylor.bundle_generator.composer_manager"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerManager">
+            <argument type="service" id="dktaylor.bundle_generator.process_runner" />
+            <argument type="service" id="dktaylor.bundle_generator.composer_json_reader" />
+        </service>
+
+        <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerManagerInterface"
+               service="dktaylor.bundle_generator.composer_manager" />
+
+        <!-- FileManager factory chain -->
+
+        <service id="dktaylor.bundle_generator.file_manager_factory"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FileManagerFactory">
             <argument type="service" id="filesystem" />
             <argument type="service" id="maker.autoloader_util" />
             <argument type="service" id="maker.file_link_formatter" />
         </service>
 
-        <service  id="dktaylor.bundle_generator.generator_factory" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactory">
+        <service id="dktaylor.bundle_generator.caching_file_manager_factory"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\Factory\CachingFileManagerFactory">
             <argument type="service" id="dktaylor.bundle_generator.file_manager_factory" />
-            <argument type="service" id="maker.template_component_generator" />
         </service>
 
-        <service id="dktaylor.bundle_generator.make_bundle" class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
-            <argument type="service" id="dktaylor.bundle_generator.generator_factory" />
-            <argument type="service" id="maker.autoloader_finder" />
-            <argument type="service" id="filesystem" />
+        <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FileManagerFactoryInterface"
+               service="dktaylor.bundle_generator.caching_file_manager_factory" />
+
+        <!-- Generator factory -->
+
+        <service id="dktaylor.bundle_generator.generator_factory"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactory">
+            <argument type="service" id="dktaylor.bundle_generator.file_manager_factory" />
+            <argument type="service" id="maker.template_component_generator" />
+            <argument type="service" id="maker.php_compat_util" />
+        </service>
+
+        <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactoryInterface"
+               service="dktaylor.bundle_generator.generator_factory" />
+
+        <!-- Scaffolder -->
+
+        <service id="dktaylor.bundle_generator.scaffolder"
+                 class="Dktaylor\BundleGeneratorBundler\Symfony\Maker\Scaffolder">
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\GeneratorFactoryInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\ComposerManagerInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\FilesystemManagerInterface" />
+        </service>
+
+        <!-- Maker command -->
+
+        <service id="dktaylor.bundle_generator.make_bundle"
+                 class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\Scaffolder" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolver" />
             <tag name="maker.command" />
         </service>
+
     </services>
+
 </container>
