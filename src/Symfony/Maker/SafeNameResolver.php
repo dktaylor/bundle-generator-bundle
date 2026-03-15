@@ -12,7 +12,7 @@ readonly class SafeNameResolver implements SafeNameResolverInterface
 
         if ($safeName !== $name) {
             throw new RuntimeCommandException(
-                sprintf('Bundle name "%s" is invalid or contains illegal path characters.', $bundleFullName)
+                sprintf('Bundle name "%s" is invalid or contains illegal path characters.', $name)
             );
         }
 

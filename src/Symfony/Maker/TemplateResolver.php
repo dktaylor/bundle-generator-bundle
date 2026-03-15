@@ -2,7 +2,6 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 
-use Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolverInterface;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
 
 class TemplateResolver implements TemplateResolverInterface

@@ -2,21 +2,39 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 
-use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerJsonReaderInterface;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
+use Symfony\Component\Filesystem\Filesystem;
 
 class ComposerJsonReader implements ComposerJsonReaderInterface
 {
-    private array $composerJsonCache = [];
+    private array $cache = [];
 
+    public function __construct(
+        private readonly Filesystem $filesystem,
+    ) {}
+
+    /**
+     * Returns array<string, mixed>
+     * @throws RuntimeCommandException if the file is missing, unreadable, or contains invalid JSON.
+     */
     public function read(string $directory): array
     {
-        if (isset($this->composerJsonCache[$directory])) {
-            return $this->composerJsonCache[$directory];
+        if (isset($this->cache[$directory])) {
+            return $this->cache[$directory];
         }
 
-        $file = $this->ensureFileExistsAndIsReadable($directory. '/composer.json');
-        $contents = $this->retrieveContents($file);
+        $path = rtrim($directory, '/') . '/composer.json';
+
+        if (!$this->filesystem->exists($path) || !is_readable($path)) {
+            throw new RuntimeCommandException(
+                sprintf('Cannot read "%s". Ensure that the file exists and is readable.', $path)
+            );
+        }
+
+        $contents = file_get_contents($path);
+        if (false === $contents) {
+            throw new RuntimeCommandException(sprintf('Failed to read "%s".', $path));
+        }
 
         try {
             $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
@@ -33,28 +51,6 @@ class ComposerJsonReader implements ComposerJsonReaderInterface
             );
         }
 
-        return $this->composerJsonCache[$directory] = $data;
-    }
-
-    private function ensureFileExistsAndIsReadable(string $filename): string
-    {
-        $file = realpath($filename);
-        if (false === $file || !file_exists($file) || !is_readable($file)) {
-            throw new RuntimeCommandException(sprintf('Cannot read "%s". Ensure that the file exists and is readable.', $filename));
-        }
-
-        return $file;
-    }
-
-    private function retrieveContents(string $file): string
-    {
-        $contents = file_get_contents($file);
-        if (false === $contents) {
-            throw new RuntimeCommandException(
-                sprintf('Failed to read "%s".', $file)
-            );
-        }
-
-        return $contents;
+        return $this->cache[$directory] = $data;
     }
 }

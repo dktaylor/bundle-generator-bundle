@@ -2,7 +2,7 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject;
 
-readonly class FileManagerFactoryContext
+final readonly class FileManagerFactoryContext
 {
     public function __construct(
         public string $bundleDir,

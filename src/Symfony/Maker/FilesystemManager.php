@@ -9,8 +9,6 @@ use Symfony\Component\Filesystem\Filesystem;
 
 class FilesystemManager extends AbstractProcessHandler implements FilesystemManagerInterface
 {
-    private array $composerJsonCache = [];
-
     public function __construct(
         private readonly Filesystem $filesystem,
         private readonly SafeNameResolverInterface $safeNameResolver,

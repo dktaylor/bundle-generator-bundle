@@ -5,12 +5,9 @@ namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\ScaffoldContext;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
-use Symfony\Component\Console\Input\InputInterface;
 
-class ComposerManager extends AbstractProcessHandler implements ComposerManagerInterface
+class ComposerManager implements ComposerManagerInterface
 {
-    private array $composerJsonCache = [];
-
     public function __construct(
         private readonly ProcessRunnerInterface $processRunner,
         private readonly ComposerJsonReaderInterface $composerJsonReader,
@@ -18,8 +15,11 @@ class ComposerManager extends AbstractProcessHandler implements ComposerManagerI
 
     public function init(ScaffoldContext $context, ConsoleStyle $io): void
     {
-        $cmd = $this->buildComposerInitCommand($context);
-        $this->processRunner->run($cmd, $io, sprintf('composer init failed in "%s".', $context->bundleDir));
+        $this->processRunner->run(
+            $this->buildComposerInitCommand($context),
+            $io,
+            sprintf('composer init failed in "%s".', $context->bundleDir)
+        );
     }
 
     public function hasLibRepo(string $rootDirectory): bool

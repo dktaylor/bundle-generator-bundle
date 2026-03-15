@@ -79,9 +79,10 @@
 
         <service id="dktaylor.bundle_generator.scaffolder"
                  class="Dktaylor\BundleGeneratorBundler\Symfony\Maker\Scaffolder">
-            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\GeneratorFactoryInterface" />
-            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\ComposerManagerInterface" />
-            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Maker\FilesystemManagerInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactoryInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerManagerInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FilesystemManagerInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolverInterface" />
         </service>
 
         <!-- Maker command -->

@@ -20,6 +20,7 @@ class CachingFileManagerFactory implements FileManagerFactoryInterface
     public function create(FileManagerFactoryContext $context): FileManager
     {
         $key = hash('xxh3', $context->bundleDir . "\x00" . $context->templatePath);
+
         if (!isset($this->cache[$key])) {
             $this->cache[$key] = $this->inner->create($context);
         }
