@@ -12,6 +12,13 @@ readonly class SafeNameResolver implements SafeNameResolverInterface
             throw new RuntimeCommandException('Bundle name cannot be empty.');
         }
 
+        // *nix allows backslash as a valid filename character.
+        if (str_contains($name, '\\')) {
+            throw new RuntimeCommandException(
+                sprintf('Bundle name "%s" is invalid or contains illegal path characters.', $name)
+            );
+        }
+
         $safeName = basename($name);
 
         if ($safeName !== $name) {
