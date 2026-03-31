@@ -8,6 +8,10 @@ readonly class SafeNameResolver implements SafeNameResolverInterface
 {
     public function resolve(string $name): string
     {
+        if ('' === $name) {
+            throw new RuntimeCommandException('Bundle name cannot be empty.');
+        }
+
         $safeName = basename($name);
 
         if ($safeName !== $name) {
