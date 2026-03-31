@@ -17,7 +17,7 @@ class FilesystemManager extends AbstractProcessHandler implements FilesystemMana
     /**
      * @inheritDoc
      */
-    public function createLibSymlink(string $bundleDir, string $rootDirectory, string $bundleFullName, ConsoleStyle $io): void
+    public function createLibSymlink(string $bundleDir, string $rootDirectory, string $bundleFullName, BundleIOInterface $io): void
     {
         $safeName = $this->safeNameResolver->resolve($bundleFullName);
         $symlinkTarget = $rootDirectory . '/lib/' . $safeName;

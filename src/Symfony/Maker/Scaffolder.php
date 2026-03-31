@@ -2,11 +2,10 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 
+use Dktaylor\BundleGeneratorBundle\Symfony\Maker\Adapter\ClassNameDetailsAdapter;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\GeneratorFactoryContext;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\ScaffoldContext;
-use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\Generator;
-use Symfony\Bundle\MakerBundle\Util\ComposerAutoloaderFinder;
 
 class Scaffolder
 {
@@ -15,10 +14,10 @@ class Scaffolder
         private readonly ComposerManagerInterface $composerManager,
         private readonly FilesystemManagerInterface $filesystemManager,
         private readonly TemplateResolverInterface $templateResolver,
-        private readonly ComposerAutoLoaderFinder $composerAutoloaderFinder,
+        private readonly ClassLoaderFinderInterface $composerAutoloaderFinder,
     ) {}
 
-    public function scaffold(ScaffoldContext $context, ConsoleStyle $io): void
+    public function scaffold(ScaffoldContext $context, BundleIOInterface $io): void
     {
         $bundleGenerator = $this->buildBundleGenerator($context);
 
@@ -60,13 +59,17 @@ class Scaffolder
 
     private function generateBundleClass(Generator $bundleGenerator, ScaffoldContext $context): void
     {
-        $classNameDetails = $bundleGenerator->createClassNameDetails(
-            $context->bundleFullName, '\\', 'Bundle'
+        $classNameDetails = new ClassNameDetailsAdapter(
+            $bundleGenerator->createClassNameDetails($context->bundleFullName, '\\', 'Bundle')
         );
+
         $bundleGenerator->generateClass(
             $classNameDetails->getFullName(),
             $context->bundleClassTemplatePath,
-            ['use_statements' => $context->useStatements, 'extension_alias' => $context->extensionAlias]
+            [
+                'use_statements' => $context->useStatements->unwrap(),
+                'extension_alias' => $context->extensionAlias
+            ]
         );
     }
 

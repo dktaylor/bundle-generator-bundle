@@ -29,7 +29,7 @@
         <service id="dktaylor.bundle_generator.filesystem_manager"
                  class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FilesystemManager">
             <argument type="service" id="filesystem" />
-            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\SafeNameResolver" />
+            <argument type="service" id="dktaylor.bundle_generator.safe_name_resolver" />
         </service>
 
         <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\Factory\FilesystemManagerInterface"
@@ -75,6 +75,15 @@
         <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\GeneratorFactoryInterface"
                service="dktaylor.bundle_generator.generator_factory" />
 
+        <!-- ClassLoaderFinder -->
+        <service id="dktaylor.bundle_generator.class_autoloader"
+                 class="Dktaylor\BundlerGeneratorBundle\Symfony\Maker\ComposerAutoloaderFinderAdapter">
+            <argument type="service" id="Symfony\Bundle\MakerBundle\Util\ComposerAutoloaderFinder" />
+        </service>
+
+        <alias id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ClassLoaderFinderInterface"
+               service="dktaylor.bundle_generator.class_autoloader" />
+
         <!-- Scaffolder -->
 
         <service id="dktaylor.bundle_generator.scaffolder"
@@ -83,14 +92,17 @@
             <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ComposerManagerInterface" />
             <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\FilesystemManagerInterface" />
             <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolverInterface" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\ClassLoaderFinderInterface" />
         </service>
 
-        <!-- Maker command -->
-
+        <!-- Maker command - ConsoleStyle is adapted to BundleIOInterface at runtime
+             in generate() and interact(); it cannot be container-wired as it depends
+             on per-invocation input/output streams. -->
         <service id="dktaylor.bundle_generator.make_bundle"
                  class="Dktaylor\BundleGeneratorBundle\Symfony\Maker\MakeSymfonyBundle">
             <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\Scaffolder" />
-            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolver" />
+            <argument type="service" id="Dktaylor\BundleGeneratorBundle\Symfony\Maker\TemplateResolverInterface" />
+            <argument type="service" id="dktaylor.bundle_generator.safe_name_resolver" />
             <tag name="maker.command" />
         </service>
 

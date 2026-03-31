@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 
+use Dktaylor\BundleGeneratorBundle\Symfony\Maker\Adapter\ConsoleStyleAdapter;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\ScaffoldContext;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
@@ -29,6 +30,7 @@ class MakeSymfonyBundle extends AbstractMaker
     public function __construct(
         private readonly Scaffolder $scaffolder,
         private readonly TemplateResolverInterface $templateResolver,
+        private readonly SafeNameResolverInterface $safeNameResolver,
     ) {}
 
     /**
@@ -97,8 +99,8 @@ class MakeSymfonyBundle extends AbstractMaker
      */
     public function generate(InputInterface $input, ConsoleStyle $io, Generator $generator): void
     {
-        $context = ScaffoldContext::fromInput($input, $generator, $this->templateResolver);
-        $this->scaffolder->scaffold($context, $io);
+        $context = ScaffoldContext::fromInput($input, $generator, $this->templateResolver, $this->safeNameResolver);
+        $this->scaffolder->scaffold($context, new ConsoleStyleAdapter($io));
     }
 
     /**

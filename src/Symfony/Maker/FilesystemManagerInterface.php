@@ -2,7 +2,6 @@
 
 namespace Dktaylor\BundleGeneratorBundle\Symfony\Maker;
 
-use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\Exception\RuntimeCommandException;
 
 interface FilesystemManagerInterface
@@ -12,5 +11,5 @@ interface FilesystemManagerInterface
      *
      * @throws RuntimeCommandException if the symlink cannot be created
      */
-    public function createLibSymlink(string $bundleDir, string $rootDirectory, string $bundleFullName, ConsoleStyle $io): void;
+    public function createLibSymlink(string $bundleDir, string $rootDirectory, string $bundleFullName, BundleIOInterface $io): void;
 }

@@ -8,6 +8,11 @@
             "Dktaylor\\BundleGeneratorBundle\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Dktaylor\\BundleGeneratorBundle\\Tests\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "Daniel Taylor",
@@ -30,5 +35,9 @@
         "symfony/http-kernel": "^6.4",
         "symfony/framework-bundle": "^6.4",
         "doctrine/orm": "^3.6"
+    },
+    "require-dev": {
+        "symfony/phpunit-bridge": "^8.0",
+        "phpunit/phpunit": "^13.0"
     }
 }
