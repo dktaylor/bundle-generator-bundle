@@ -14,6 +14,7 @@ use Dktaylor\BundleGeneratorBundle\Symfony\Maker\UseStatementsInterface;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\GeneratorFactoryContext;
 use Dktaylor\BundleGeneratorBundle\Symfony\Maker\ValueObject\ScaffoldContext;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\Util\ClassNameDetails;
@@ -35,10 +36,15 @@ class ScaffolderTest extends TestCase
         $this->generatorFactory = $this->createMock(GeneratorFactoryInterface::class);
         $this->composerManager = $this->createMock(ComposerManagerInterface::class);
         $this->filesystemManager = $this->createMock(FilesystemManagerInterface::class);
-        $this->templateResolver = $this->createMock(TemplateResolverInterface::class);
-        $this->composerAutoloaderFinder = $this->createMock(ClassLoaderFinderInterface::class);
-        $this->io = $this->createMock(BundleIOInterface::class);
-        $this->bundleGenerator = $this->createMock(Generator::class);
+
+        $this->templateResolver = $this->createStub(TemplateResolverInterface::class);
+        $this->composerAutoloaderFinder = $this->createStub(ClassLoaderFinderInterface::class);
+        $this->io = $this->createStub(BundleIOInterface::class);
+
+        $this->templateResolver
+            ->method('resolve')
+            ->willReturnCallback(fn(string $t): string => '/templates/' . $t)
+        ;
 
         $this->scaffolder = new Scaffolder(
             $this->generatorFactory,
@@ -53,12 +59,16 @@ class ScaffolderTest extends TestCase
     public function testScaffoldAFullBundleWithComposerInit(): void
     {
         $context = $this->makeContext(initComposer: true);
+        $bundleGenerator = $this->expectGeneratorCreated($context);
 
-        $this->expectGeneratorCreated($context);
-        $this->expectPsr4Registered();
-        $this->expectBundleClassGenerated($context);
-        $this->expectBundleFilesGenerated();
-        $this->expectWriteChanges();
+        $this->expectBundleClassGenerated($bundleGenerator, $context);
+        $this->expectBundleFilesGenerated($bundleGenerator);
+        $this->expectWriteChanges($bundleGenerator);
+
+        $this->composerAutoloaderFinder
+            ->method('getClassLoader')
+            ->willReturn($this->createStub(ClassLoader::class))
+        ;
 
         $this->composerManager
             ->expects($this->once())
@@ -88,12 +98,16 @@ class ScaffolderTest extends TestCase
     public function testSkipsComposerInitWhenNotRequested(): void
     {
         $context = $this->makeContext(initComposer: false);
+        $bundleGenerator = $this->expectGeneratorCreated($context);
 
-        $this->expectGeneratorCreated($context);
-        $this->expectPsr4Registered();
-        $this->expectBundleClassGenerated($context);
-        $this->expectBundleFilesGenerated();
-        $this->expectWriteChanges();
+        $this->expectBundleClassGenerated($bundleGenerator, $context);
+        $this->expectBundleFilesGenerated($bundleGenerator);
+        $this->expectWriteChanges($bundleGenerator);
+
+        $this->composerAutoloaderFinder
+            ->method('getClassLoader')
+            ->willReturn($this->createStub(ClassLoader::class))
+        ;
 
         $this->composerManager
             ->expects($this->never())
@@ -106,6 +120,7 @@ class ScaffolderTest extends TestCase
         ;
 
         $this->composerManager
+            ->expects($this->once())
             ->method('hasLibRepo')
             ->willReturn(false)
         ;
@@ -122,12 +137,16 @@ class ScaffolderTest extends TestCase
     public function testSkipsAddingLibRepoWhenAlreadyRegistered(): void
     {
         $context = $this->makeContext(initComposer: false);
+        $bundleGenerator = $this->expectGeneratorCreated($context);
 
-        $this->expectGeneratorCreated($context);
-        $this->expectPsr4Registered();
-        $this->expectBundleClassGenerated($context);
-        $this->expectBundleFilesGenerated();
-        $this->expectWriteChanges();
+        $this->expectBundleClassGenerated($bundleGenerator, $context);
+        $this->expectBundleFilesGenerated($bundleGenerator);
+        $this->expectWriteChanges($bundleGenerator);
+
+        $this->composerAutoloaderFinder
+            ->method('getClassLoader')
+            ->willReturn($this->createStub(ClassLoader::class))
+        ;
 
         $this->filesystemManager
             ->expects($this->once())
@@ -135,6 +154,7 @@ class ScaffolderTest extends TestCase
         ;
 
         $this->composerManager
+            ->expects($this->once())
             ->method('hasLibRepo')
             ->with($context->rootDirectory)
             ->willReturn(true)
@@ -152,23 +172,17 @@ class ScaffolderTest extends TestCase
     public function testGeneratesBundleFilesFromResolvedTemplatePaths(): void
     {
         $context = $this->makeContext(initComposer: false);
+        $bundleGenerator = $this->expectGeneratorCreated($context);
 
-        $this->expectGeneratorCreated($context);
-        $this->expectPsr4Registered();
-        $this->expectBundleClassGenerated($context);
-        $this->expectWriteChanges();
+        $this->expectBundleClassGenerated($bundleGenerator, $context);
+        $this->expectWriteChanges($bundleGenerator);
 
-        $this->templateResolver
-            ->method('resolve')
-            ->willReturnMap([
-                ['bundle/Bundle.tpl.php', '/templates/bundle/Bundle.tpl.php'],
-                ['bundle/DocIndex.tpl.php', '/templates/bundle/DocIndex.tpl.php'],
-                ['bundle/Readme.tpl.php', '/templates/bundle/Readme.tpl.php'],
-                ['bundle/Services.tpl.php', '/templates/bundle/Services.tpl.php'],
-            ])
+        $this->composerAutoloaderFinder
+            ->method('getClassLoader')
+            ->willReturn($this->createStub(ClassLoader::class))
         ;
 
-        $this->bundleGenerator
+        $bundleGenerator
             ->expects($this->exactly(3))
             ->method('generateFile')
             ->willReturnCallback(function (string $path, string $template, array $vars) use ($context): void {
@@ -177,8 +191,16 @@ class ScaffolderTest extends TestCase
             })
         ;
 
-        $this->filesystemManager->method('createLibSymlink');
-        $this->composerManager->method('hasLibRepo')->willReturn(true);
+        $this->filesystemManager
+            ->expects($this->once())
+            ->method('createLibSymlink')
+        ;
+
+        $this->composerManager
+            ->expects($this->once())
+            ->method('hasLibRepo')
+            ->willReturn(true)
+        ;
 
         $this->scaffolder->scaffold($context, $this->io);
     }
@@ -187,13 +209,19 @@ class ScaffolderTest extends TestCase
     public function testCorrectPsr4NamespacesAreRegistered(): void
     {
         $context = $this->makeContext(initComposer: false);
+        $bundleGenerator = $this->createStub(Generator::class);
 
-        $this->bundleGenerator->method('getRootNamespace')->willReturn('Acme\\DemoBundle');
-        $this->bundleGenerator->method('getRootDirectory')->willReturn($context->bundleDir);
+        $bundleGenerator->method('getRootNamespace')->willReturn('Acme\\DemoBundle');
+        $bundleGenerator->method('getRootDirectory')->willReturn($context->bundleDir);
+        $bundleGenerator
+            ->method('createClassNameDetails')
+            ->willReturn(new ClassNameDetails('AcmeDemoBundle', 'Acme\\DemoBundle\\', 'Bundle'))
+        ;
 
         $this->generatorFactory
+            ->expects($this->once())
             ->method('create')
-            ->willReturn($this->bundleGenerator)
+            ->willReturn($bundleGenerator)
         ;
 
         $classLoader = $this->createMock(ClassLoader::class);
@@ -208,18 +236,16 @@ class ScaffolderTest extends TestCase
             ->willReturn($classLoader)
         ;
 
-        $classNameDetails = new ClassNameDetails('AcmeDemoBundle', 'Acme\\DemoBundle\\', 'Bundle');
-        $this->bundleGenerator
-            ->method('createClassNameDetails')
-            ->willReturn($classNameDetails)
+        $this->filesystemManager
+            ->expects($this->once())
+            ->method('createLibSymlink')
         ;
 
-        $this->bundleGenerator->method('generateClass');
-        $this->bundleGenerator->method('generateFile');
-        $this->bundleGenerator->method('writeChanges');
-
-        $this->filesystemManager->method('createLibSymlink');
-        $this->composerManager->method('hasLibRepo')->willReturn(true);
+        $this->composerManager
+            ->expects($this->once())
+            ->method('hasLibRepo')
+            ->willReturn(true)
+        ;
 
         $this->scaffolder->scaffold($context, $this->io);
     }
@@ -230,7 +256,7 @@ class ScaffolderTest extends TestCase
 
     private function makeContext(bool $initComposer): ScaffoldContext
     {
-        $useStatements = $this->createMock(UseStatementsInterface::class);
+        $useStatements = $this->createStub(UseStatementsInterface::class);
         $useStatements->method('unwrap')->willReturn(new UseStatementGenerator([]));
 
         return new ScaffoldContext(
@@ -251,8 +277,12 @@ class ScaffolderTest extends TestCase
         );
     }
 
-    private function expectGeneratorCreated(ScaffoldContext $context): void
+    private function expectGeneratorCreated(ScaffoldContext $context): Generator&MockObject
     {
+        $bundleGenerator = $this->createMock(Generator::class);
+        $bundleGenerator->method('getRootNamespace')->willReturn('Acme\\DemoBundle');
+        $bundleGenerator->method('getRootDirectory')->willReturn('/project/AcmeDemoBundle');
+
         $this->generatorFactory
             ->expects($this->once())
             ->method('create')
@@ -261,31 +291,24 @@ class ScaffolderTest extends TestCase
                     && $ctx->bundleDir === $context->bundleDir
                     && $ctx->templatePath === $context->templatePath;
             }))
-            ->willReturn($this->bundleGenerator)
+            ->willReturn($bundleGenerator)
         ;
+
+        return $bundleGenerator;
     }
 
-    private function expectPsr4Registered(): void
-    {
-        $this->bundleGenerator->method('getRootNamespace')->willReturn('Acme\\DemoBundle');
-        $this->bundleGenerator->method('getRootDirectory')->willReturn('/project/AcmeDemoBundle');
-
-        $classLoader = $this->createMock(ClassLoader::class);
-        $this->composerAutoloaderFinder->method('getClassLoader')->willReturn($classLoader);
-    }
-
-    private function expectBundleClassGenerated(ScaffoldContext $context): void
+    private function expectBundleClassGenerated(Generator&MockObject $bundleGenerator, ScaffoldContext $context): void
     {
         $classNameDetails = new ClassNameDetails('AcmeDemoBundle', 'Acme\\DemoBundle\\', 'Bundle');
 
-        $this->bundleGenerator
+        $bundleGenerator
             ->expects($this->once())
             ->method('createClassNameDetails')
             ->with($context->bundleFullName, '\\', 'Bundle')
             ->willReturn($classNameDetails)
         ;
 
-        $this->bundleGenerator
+        $bundleGenerator
             ->expects($this->once())
             ->method('generateClass')
             ->with(
@@ -299,24 +322,30 @@ class ScaffolderTest extends TestCase
         ;
     }
 
-    private function expectBundleFilesGenerated(): void
+    private function expectBundleFilesGenerated(Generator&MockObject $bundleGenerator): void
     {
-        $this->templateResolver
-            ->method('resolve')
-            ->willReturnCallback(fn(string $t): string => '/templates/' . $t)
-        ;
-
-        $this->bundleGenerator
+        $bundleGenerator
             ->expects($this->exactly(3))
             ->method('generateFile')
         ;
     }
 
-    private function expectWriteChanges(): void
+    private function expectWriteChanges(Generator&MockObject $bundleGenerator): void
     {
-        $this->bundleGenerator
+        $bundleGenerator
             ->expects($this->once())
             ->method('writeChanges')
+        ;
+    }
+
+    private function expectPsr4Registered(Generator&MockObject $bundleGenerator): void
+    {
+        $bundleGenerator->method('getRootNamespace')->willReturn('Acme\\DemoBundle');
+        $bundleGenerator->method('getRootDirectory')->willReturn('/project/AcmeDemoBundle');
+
+        $this->composerAutoloaderFinder
+            ->method('getClassLoader')
+            ->willReturn($this->createStub(ClassLoader::class))
         ;
     }
 }
