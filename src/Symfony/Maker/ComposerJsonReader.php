@@ -45,7 +45,7 @@ class ComposerJsonReader implements ComposerJsonReaderInterface
             );
         }
 
-        if (!is_array($data)) {
+        if (!is_array($data) || array_is_list($data)) {
             throw new RuntimeCommandException(
                 sprintf('composer.json in "%s" is valid JSON but does not contain an object.', $directory)
             );
