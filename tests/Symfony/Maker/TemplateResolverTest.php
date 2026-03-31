@@ -90,6 +90,8 @@ class TemplateResolverTest extends TestCase
 
     public function testThrowsWhenTemplateIsNotReadable(): void
     {
+        // Works only on *nix.
+        // May fail if tests are ever run as root since root ignores permissions.
         $this->createTemplate('bundle/Unreadable.tpl.php', permissions: 0o000);
 
         $this->expectException(RuntimeCommandException::class);
